@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Weather App</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #207edc;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #app {
+      background: rgb(177, 65, 233);
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      padding: 2rem;
+      width: 320px;
+      text-align: center;
+      transition: all 0.3s ease-in-out;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #0077b6;
+    }
+
+    .search-form {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .search-form input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .search-form button {
+      padding: 10px 16px;
+      background-color: #0077b6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .search-form button:hover {
+      background-color: #005f94;
+    }
+
+    #details {
+      margin-top: 1rem;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+      font-size: 1.1rem;
+    }
+
+    .label {
+      font-weight: 600;
+    }
+
+    #main-icon {
+      font-size: 48px;
+      margin-top: 1rem;
+    }
+
+    #status {
+      font-size: 0.9rem;
+      color: #888;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <h1>Weather</h1>
+
+    <form class="search-form" onsubmit="event.preventDefault(); doSearch();">
+      <input id="search" type="text" placeholder="Enter location" />
+      <button type="submit">🔍</button>
+    </form>
+
+    <div id="main-icon">⛅</div>
+
+    <div id="details">
+      <div class="row"><span class="label">Temp:</span><span id="temp">--°C</span></div>
+      <div class="row"><span class="label">Wind:</span><span id="wind">-- km/h</span></div>
+      <div class="row"><span class="label">Humidity:</span><span id="humid">--%</span></div>
+    </div>
+    <p id="status"></p>
+  </div>
+
+<script>
+  const geocodeURL = 'https://geocoding-api.open-meteo.com/v1/search';
+  const weatherBase = 'https://api.open-meteo.com/v1/forecast';
+
+  async function doSearch() {
+    const q = document.getElementById('search').value.trim();
+    const status = document.getElementById('status');
+    const icon = document.getElementById('main-icon');
+    if (!q) { status.textContent = 'Please enter a location.'; return; }
+
+    status.textContent = 'Fetching...';
+
+    try {
+      const geo = await fetch(`${geocodeURL}?name=${encodeURIComponent(q)}&count=1`).then(r => r.json());
+      if (!geo.results?.length) throw new Error('Location not found.');
+      const loc = geo.results[0];
+      status.textContent = `Weather for ${loc.name}, ${loc.country}`;
+
+      const w = await fetch(`${weatherBase}?latitude=${loc.latitude}&longitude=${loc.longitude}&current_weather=true&hourly=relativehumidity_2m`).then(r => r.json());
+      const cw = w.current_weather;
+      const hidx = w.hourly.time.indexOf(cw.time);
+      const humidity = hidx >= 0 ? w.hourly.relativehumidity_2m[hidx] : '--';
+
+      document.getElementById('temp').textContent = `${cw.temperature}°C`;
+      document.getElementById('wind').textContent = `${cw.windspeed} km/h`;
+      document.getElementById('humid').textContent = `${humidity}%`;
+
+      // Weather icons (simplified)
+      const code = cw.weathercode;
+      let emoji = '🌤️';
+      if (code === 0) emoji = '☀️';
+      else if (code <= 2) emoji = '🌤️';
+      else if (code <= 48) emoji = '🌫️';
+      else if (code <= 67) emoji = '🌧️';
+      else if (code <= 77) emoji = '❄️';
+      else if (code <= 86) emoji = '🌨️';
+      else emoji = '⛈️';
+
+      icon.textContent = emoji;
+    } catch (e) {
+      status.textContent = e.message;
+    }
+  }
+</script>
+
+</body>
+</html>
